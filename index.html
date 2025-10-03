@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Webook - موقع ثلاثي الأبعاد مع دعم النماذج بدقة 32K">
+    <meta name="keywords" content="3D, ثلاثي الأبعاد, موقع, Webook">
+    <meta name="author" content="Webook">
+    <meta property="og:title" content="Webook">
+    <meta property="og:description" content="موقع ثلاثي الأبعاد مع دعم النماذج بدقة 32K">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://webook.netlify.app">
+    <title>Webook</title>
+    
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>تطبيق الحجوزات</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:"Tajawal", sans-serif; overflow-x:hidden; background:#f4f4f4; color:black; transition: background 0.5s, color 0.5s; }
+  button { cursor:pointer; border:none; border-radius:8px; padding:10px 15px; font-size:1rem; transition:0.3s; }
+  button:hover { opacity:0.9; }
+
+  /* ===== تسجيل الدخول ===== */
+  #loginOverlay {
+    position:fixed; top:0; left:0; width:100%; height:100%;
+    background:rgba(0,0,0,0.7); display:flex; justify-content:center; align-items:center;
+    z-index:9999;
+  }
+  #loginBox {
+    background:white; padding:20px; border-radius:10px; max-width:300px; width:90%; text-align:center;
+  }
+  #loginBox input { width:90%; padding:8px; margin:8px 0; border-radius:5px; border:1px solid #ccc; }
+  #loginBox button { background:#007bff; color:white; padding:10px 15px; border:none; border-radius:8px; cursor:pointer; }
+
+  /* ===== الصفحات ===== */
+  .page { display:none; position:absolute; top:0; left:0; width:100%; padding:20px; transition: transform 0.5s ease-in-out, opacity 0.5s; }
+  .active { display:block; transform: translateX(0); opacity:1; }
+
+  input, select { padding:8px; margin:8px 0; width:80%; border-radius:5px; border:1px solid #ccc; }
+
+  .primary-btn { background:linear-gradient(90deg,#ff7e5f,#feb47b); color:white; }
+
+  /* ===== شريط التنقل بالأيقونات ===== */
+  .nav-bar { position:fixed; bottom:0; left:0; width:100%; display:flex; justify-content:space-around; background:#fff; border-top:1px solid #ccc; padding:10px 0; box-shadow:0 -2px 5px rgba(0,0,0,0.1); }
+  .nav-bar button { flex:1; margin:0 5px; background:none; color:#555; transition:0.3s; font-size:1.5rem; }
+  .nav-bar button:hover, .nav-bar button.active { color:#6a0dad; }
+
+  /* ===== الوضع الليلي ===== */
+  body.dark { background:#121212; color:white; }
+  body.dark .nav-bar { background:#1e1e1e; border-top:1px solid #333; }
+  body.dark input, body.dark select { background:#333; color:white; border:1px solid #555; }
+  body.dark .primary-btn { color:white; }
+</style>
+
+</head>
+<body>
+
+
+<!-- ===== نافذة تسجيل الدخول ===== -->
+<div id="loginOverlay">
+  <div id="loginBox">
+    <h2>تسجيل الدخول</h2>
+    <input type="email" id="loginEmail" placeholder="البريد الإلكتروني"><br>
+    <input type="password" id="loginPassword" placeholder="كلمة المرور"><br>
+    <button id="loginBtn">تسجيل الدخول</button>
+  </div>
+</div>
+
+<div class="main-content" id="mainContent">
+
+  <!-- زر تبديل الوضع الليلي -->
+  <button id="toggleDark" style="position:fixed; top:10px; right:10px; z-index:1000;">🌙</button>
+
+  <!-- الصفحات -->
+  <div id="home" class="page active">
+    <h2>الرئيسية</h2>
+    <p>تعليمات الحجز التلقائي:</p>
+    <ul style="text-align:left; margin:10px auto; max-width:300px;">
+      <li>اضغط على "الحجز التلقائي" لبدء الحجز.</li>
+      <li>تستطيع متابعة حالتك عبر "تذاكري".</li>
+    </ul>
+  </div>
+
+  <div id="tickets" class="page">
+    <h2>تذاكري</h2>
+    <div id="ticketList"></div>
+  </div>
+
+  <div id="autoBooking" class="page">
+    <h2>الحجز التلقائي</h2>
+    <p>يمكنك حجز تذاكر مباريات/فعاليات عبر الضغط على الزر أدناه:</p>
+    <button class="primary-btn" id="startBooking">احجز الآن</button>
+    <div id="bookingSteps" style="margin-top:20px; display:none;">
+      <div id="step1">
+        <input type="text" id="matchName" placeholder="أدخل اسم المباراة/الفعالية">
+        <button class="primary-btn" id="searchMatch">بحث</button>
+      </div>
+      <div id="step2" style="display:none;">
+        <p>البحث جارٍ... ⏳ (5 ثوانٍ)</p>
+      </div>
+      <div id="step3" style="display:none;">
+        <input type="number" id="ticketCount" placeholder="عدد التذاكر">
+        <input type="text" id="section" placeholder="المربع / القسم">
+        <button class="primary-btn" id="confirmBooking">تأكيد الحجز</button>
+      </div>
+      <div id="step4" style="display:none; margin-top:10px;">
+        <p id="bookingSummary"></p>
+      </div>
+    </div>
+  </div>
+
+  <div id="account" class="page">
+    <h2>حسابي</h2>
+    <img id="profilePic" src="https://via.placeholder.com/100" alt="صورة شخصية" style="border-radius:50%; margin:10px 0;">
+    <br>
+    <input type="text" id="username" placeholder="الاسم">
+    <br>
+    <input type="text" id="userHandle" placeholder="اليوزر">
+    <br>
+    <button class="primary-btn" id="updateProfile">تحديث الملف الشخصي</button>
+  </div>
+
+  <div id="settings" class="page">
+    <h2>الإعدادات</h2>
+    <input type="email" id="email" placeholder="البريد الإلكتروني">
+    <input type="password" id="password" placeholder="كلمة المرور">
+    <br>
+    <button class="primary-btn" id="updateSettings">تحديث الإعدادات</button>
+    <button class="primary-btn" id="logout" style="background:#ff4b5c; margin-top:10px;">تسجيل الخروج</button>
+  </div>
+
+</div>
+
+<!-- شريط التنقل بالأيقونات -->
+<div class="nav-bar">
+  <button onclick="checkLogin('home')" id="btnHome"><i class="fas fa-home"></i></button>
+  <button onclick="checkLogin('tickets')" id="btnTickets"><i class="fas fa-ticket-alt"></i></button>
+  <button onclick="checkLogin('autoBooking')" id="btnBooking"><i class="fas fa-bolt"></i></button>
+  <button onclick="checkLogin('account')" id="btnAccount"><i class="fas fa-user"></i></button>
+  <button onclick="checkLogin('settings')" id="btnSettings"><i class="fas fa-cog"></i></button>
+</div>
+
+<script>
+  let loggedIn = false;
+
+  // فتح نافذة تسجيل الدخول عند أي محاولة استخدام الموقع قبل تسجيل الدخول
+  function checkLogin(pageId){
+    if(!loggedIn){
+      document.getElementById('loginOverlay').style.display='flex';
+      return;
+    }
+    showPage(pageId);
+  }
+
+  // عرض الصفحة مع حركة iPhone
+  let currentPage='home';
+  function showPage(pageId){
+    if(pageId===currentPage) return;
+    let oldPage=document.getElementById(currentPage);
+    let newPage=document.getElementById(pageId);
+    oldPage.classList.remove('active');
+    newPage.classList.add('active');
+    currentPage=pageId;
+
+    let btns=['btnHome','btnTickets','btnBooking','btnAccount','btnSettings'];
+    btns.forEach(b=>document.getElementById(b).classList.remove('active'));
+    document.getElementById('btn'+pageId.charAt(0).toUpperCase()+pageId.slice(1)).classList.add('active');
+  }
+
+  // تسجيل الدخول
+  document.getElementById('loginBtn').onclick = function(){
+    const email = document.getElementById('loginEmail').value;
+    const password = document.getElementById('loginPassword').value;
+    if(email && password){
+      loggedIn = true;
+      document.getElementById('loginOverlay').style.display='none';
+      alert("تم تسجيل الدخول ✅");
+    } else {
+      alert("يرجى إدخال البريد وكلمة المرور");
+    }
+  }
+
+  // تبديل الوضع الليلي
+  document.getElementById('toggleDark').onclick=function(){
+    document.body.classList.toggle('dark');
+  }
+
+  // الحجز التلقائي
+  document.getElementById('startBooking').onclick=function(){ if(!loggedIn){ checkLogin(); return; } document.getElementById('bookingSteps').style.display='block'; document.getElementById('step1').style.display='block'; }
+  document.getElementById('searchMatch').onclick=function(){
+    if(!loggedIn){ checkLogin(); return; }
+    document.getElementById('step1').style.display='none';
+    document.getElementById('step2').style.display='block';
+    setTimeout(()=>{
+      document.getElementById('step2').style.display='none';
+      document.getElementById('step3').style.display='block';
+    },5000);
+  }
+  document.getElementById('confirmBooking').onclick=function(){
+    if(!loggedIn){ checkLogin(); return; }
+    let name=document.getElementById('matchName').value;
+    let count=document.getElementById('ticketCount').value;
+    let section=document.getElementById('section').value;
+    document.getElementById('step3').style.display='none';
+    document.getElementById('step4').style.display='block';
+    document.getElementById('bookingSummary').innerHTML=
+      `تم الحجز بنجاح 🎉<br>اسم الفعالية: ${name}<br>العدد: ${count}<br>المربع: ${section}`;
+    let ticketList=document.getElementById('ticketList');
+    let div=document.createElement('div');
+    div.style.border='1px solid #ccc'; div.style.margin='5px'; div.style.padding='5px';
+    div.innerHTML=`الاسم: ${name} <br> العدد: ${count} <br> المربع: ${section} <br> الحالة: جارٍ الحجز`;
+    ticketList.appendChild(div);
+  }
+
+  // الحساب والإعدادات
+  document.getElementById('updateProfile').onclick=function(){ if(!loggedIn){ checkLogin(); return; } alert('تم تحديث الملف الشخصي ✅'); }
+  document.getElementById('updateSettings').onclick=function(){ if(!loggedIn){ checkLogin(); return; } alert('تم تحديث الإعدادات ✅'); }
+  document.getElementById('logout').onclick=function(){ loggedIn=false; alert('تم تسجيل الخروج 🔒'); document.getElementById('loginOverlay').style.display='flex'; }
+</script>
+
+
+<!-- Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=GA_MEASUREMENT_ID"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'GA_MEASUREMENT_ID');
+</script>
+</body>
+</html>
